@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Scratch Card Creator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    font-family:'Playfair Display',serif;
+    background:#f4f4f4;
+    padding:20px;
+}
+
+.container{
+    max-width:1300px;
+    margin:auto;
+}
+
+h1{
+    margin-bottom:20px;
+}
+
+.creator{
+    display:grid;
+    grid-template-columns:380px 1fr;
+    gap:20px;
+}
+
+.panel{
+    background:white;
+    padding:20px;
+    border-radius:18px;
+    box-shadow:0 6px 20px rgba(0,0,0,.08);
+}
+
+label{
+    display:block;
+    font-weight:600;
+    margin-top:15px;
+}
+
+textarea,
+select{
+    width:100%;
+    margin-top:8px;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #ddd;
+}
+
+input[type=color]{
+    width:100%;
+    height:45px;
+    margin-top:6px;
+    border:none;
+}
+
+button{
+    margin-top:20px;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+    font-size:16px;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+.linkBox{
+    margin-top:15px;
+    word-break:break-all;
+    font-size:14px;
+}
+
+.preview-wrap{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.card{
+    width:700px;
+    max-width:100%;
+    aspect-ratio:16/10;
+    border-radius:24px;
+    overflow:hidden;
+    position:relative;
+    background-size:cover;
+    background-position:center;
+    box-shadow:
+        0 15px 40px rgba(0,0,0,.18),
+        0 0 0 1px rgba(255,255,255,.15);
+}
+
+.message{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:30px;
+    text-align:center;
+    z-index:2;
+}
+
+.messageBox{
+    max-width:85%;
+    padding:24px 36px;
+    border-radius:25px;
+   
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 12px 30px rgba(0,0,0,.25);
+}
+
+.lightBox{
+    background:rgba(255,255,255,.25);
+}
+
+.darkBox{
+    background:rgba(0,0,0,.25);
+}
+
+.messageText{
+    font-family:'Great Vibes',cursive;
+    font-size:2rem;
+    line-height:1.2;
+    text-shadow:0 3px 10px rgba(0,0,0,.2);
+}
+
+canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:5;
+}
+
+.revealPage{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.copyBtn{
+    margin-top:10px;
+    background:#16a34a;
+}
+
+.copyBtn:hover{
+    background:#15803d;
+}
+
+@media(max-width:900px){
+
+.creator{
+    grid-template-columns:1fr;
+}
+
+.messageText{
+    font-size:2.8rem;
+}
+
+}
+
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+
+const app = document.getElementById("app");
+
+function encodeData(obj){
+    return btoa(
+        encodeURIComponent(
+            JSON.stringify(obj)
+        )
+    );
+}
+
+function decodeData(str){
+    return JSON.parse(
+        decodeURIComponent(
+            atob(str)
+        )
+    );
+}
+
+function escapeHTML(text){
+
+    return text
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
+function renderBuilder(){
+
+app.innerHTML = `
+
+<div class="container">
+
+<h1>🎫 Romantic Scratch Card Creator</h1>
+
+<div class="creator">
+
+<div class="panel">
+
+<label>Hidden Message</label>
+
+<textarea id="message" rows="4">I have a surprise for you ❤️</textarea>
+
+<label>Background Color</label>
+<input id="bgColor" type="color" value="#f8e7ea">
+
+<label>Text Color</label>
+<input id="textColor" type="color" value="#ffffff">
+
+<label>Scratch Layer Color</label>
+<input id="scratchColor" type="color" value="#d4af37">
+
+<label>Overlay Style</label>
+
+<select id="overlayStyle">
+<option value="dark">Dark Glass</option>
+<option value="light">Light Glass</option>
+</select>
+
+<label>Background Image</label>
+<input type="file"
+id="imageUpload"
+accept="image/*">
+
+<button id="generateBtn">
+Generate Share Link
+</button>
+
+<div class="linkBox" id="linkOutput"></div>
+
+</div>
+
+<div class="panel">
+
+<h3>Live Preview</h3>
+
+<br>
+
+<div class="preview-wrap">
+
+<div id="previewCard"
+class="card"
+style="background-color:#f8e7ea;">
+
+<div class="message">
+
+<div
+id="previewBox"
+class="messageBox darkBox">
+
+<div
+id="previewMessage"
+class="messageText"
+style="color:#ffffff;">
+
+I have a surprise for you ❤️
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+let imageData = "";
+
+const message = document.getElementById("message");
+const bgColor = document.getElementById("bgColor");
+const textColor = document.getElementById("textColor");
+const overlayStyle = document.getElementById("overlayStyle");
+
+const previewCard =
+document.getElementById("previewCard");
+
+const previewMessage =
+document.getElementById("previewMessage");
+
+const previewBox =
+document.getElementById("previewBox");
+
+function updatePreview(){
+
+previewCard.style.backgroundColor =
+bgColor.value;
+
+previewMessage.textContent =
+message.value || "Hidden Message";
+
+previewMessage.style.color =
+textColor.value;
+
+previewBox.className =
+"messageBox " +
+(
+overlayStyle.value === "light"
+? "lightBox"
+: "darkBox"
+);
+
+}
+
+message.addEventListener("input",updatePreview);
+bgColor.addEventListener("input",updatePreview);
+textColor.addEventListener("input",updatePreview);
+overlayStyle.addEventListener("change",updatePreview);
+
+document
+.getElementById("imageUpload")
+.addEventListener("change",e=>{
+
+const file = e.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = () => {
+
+imageData = reader.result;
+
+previewCard.style.backgroundImage =
+`url('${imageData}')`;
+
+};
+
+reader.readAsDataURL(file);
+
+});
+
+document
+.getElementById("generateBtn")
+.addEventListener("click",()=>{
+
+const payload = {
+
+message:message.value,
+bgColor:bgColor.value,
+textColor:textColor.value,
+scratchColor:
+document.getElementById("scratchColor").value,
+overlayStyle:overlayStyle.value,
+bgImage:imageData
+
+};
+
+const link =
+location.origin +
+location.pathname +
+"#" +
+encodeData(payload);
+
+document.getElementById("linkOutput")
+.innerHTML =
+
+`<p><b>Share this link:</b></p>
+<br>
+<a href="${link}">
+${link}
+</a>
+
+<button class="copyBtn"
+onclick="navigator.clipboard.writeText('${link}')">
+
+Copy Link
+
+</button>`;
+
+});
+
+}
+
+function renderScratchCard(data){
+
+app.innerHTML = `
+
+<div class="container">
+
+<div class="revealPage">
+
+<h1>✨ Scratch To Reveal ✨</h1>
+
+</div>
+
+<div class="preview-wrap">
+
+<div
+id="card"
+class="card"
+
+style="
+background-color:${data.bgColor};
+background-image:url('${data.bgImage || ""}');
+">
+
+<div class="message">
+
+<div class="messageBox ${
+data.overlayStyle === "light"
+? "lightBox"
+: "darkBox"
+}">
+
+<div
+class="messageText"
+style="
+color:${data.textColor};
+">
+
+${escapeHTML(data.message)}
+
+</div>
+
+</div>
+
+</div>
+
+<canvas id="scratch"></canvas>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+const canvas =
+document.getElementById("scratch");
+
+const card =
+document.getElementById("card");
+
+const ctx =
+canvas.getContext("2d");
+
+canvas.width =
+card.offsetWidth;
+
+canvas.height =
+card.offsetHeight;
+
+ctx.fillStyle =
+data.scratchColor;
+
+ctx.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+ctx.fillStyle =
+"rgba(255,255,255,.25)";
+
+ctx.font =
+"bold 42px Arial";
+
+ctx.textAlign =
+"center";
+
+ctx.fillText(
+"SCRATCH HERE",
+canvas.width/2,
+canvas.height/2
+);
+
+let isDrawing = false;
+
+function erase(x,y){
+
+ctx.globalCompositeOperation =
+"destination-out";
+
+ctx.beginPath();
+
+ctx.arc(
+x,
+y,
+30,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+}
+
+canvas.addEventListener(
+"mousedown",
+()=> isDrawing = true
+);
+
+window.addEventListener(
+"mouseup",
+()=> isDrawing = false
+);
+
+canvas.addEventListener(
+"mousemove",
+e=>{
+
+if(!isDrawing) return;
+
+const rect =
+canvas.getBoundingClientRect();
+
+erase(
+e.clientX-rect.left,
+e.clientY-rect.top
+);
+
+});
+
+canvas.addEventListener(
+"touchstart",
+()=> isDrawing = true
+);
+
+canvas.addEventListener(
+"touchend",
+()=> isDrawing = false
+);
+
+canvas.addEventListener(
+"touchmove",
+e=>{
+
+if(!isDrawing) return;
+
+e.preventDefault();
+
+const rect =
+canvas.getBoundingClientRect();
+
+const touch =
+e.touches[0];
+
+erase(
+touch.clientX-rect.left,
+touch.clientY-rect.top
+);
+
+},
+{passive:false}
+);
+
+}
+
+if(location.hash.length > 1){
+
+try{
+
+const data =
+decodeData(
+location.hash.substring(1)
+);
+
+renderScratchCard(data);
+
+}catch{
+
+renderBuilder();
+
+}
+
+}else{
+
+renderBuilder();
+
+}
+
+</script>
+
+</body>
+</html>
